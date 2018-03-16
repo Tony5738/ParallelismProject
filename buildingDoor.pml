@@ -183,6 +183,11 @@ proctype fireSensor()
 	run fireSensor();
 }
 
+proctype card()
+{
+	
+}
+
 proctype journal()
 {
 	int id, day, time;
