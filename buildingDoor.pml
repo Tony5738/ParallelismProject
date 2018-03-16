@@ -13,14 +13,18 @@ typedef Log
 
 Log logbook;
 
+//light
 chan red = [0] of { byte };
 chan green = [0] of { byte };
 chan off = [0] of { byte };
-
+//door
 chan unblocked = [0] of {byte};
 chan blocked = [0] of {byte};
+//laser
 
-chan start = [0] of {byte};
+chan deactivate = [0] of {byte};
+chan detection = [0] of {byte};
+chan activate = [0] of {byte};
 
 chan alertIntrusion = [0] of {int};
 chan alertFire = [0] of {int};
@@ -39,13 +43,17 @@ init
 
 	
 	run light('o');
-	red!'r';
-	green!'g';
-	off!'o';
+	red!noValue;
+	green!noValue;
+	off!noValue;
 
 	run door('b');
-	unblocked!'u';
-	blocked!'b';
+	unblocked!noValue;
+	blocked!noValue
+
+	run laser('d',0);
+	activate!noValue;
+	deactivate!noValue;
 
 	/*run journal();
 	registerArrival!123,1010,01012018;
@@ -58,6 +66,15 @@ init
 	run fireAlarm();
 	run fireSensor();
 	detFire!noValue;
+}
+
+inline wait(x)
+{
+	int a = 0;
+	do
+		::a!=x->a++;
+		::a==x->break
+	od
 }
 
 inline addEntry(_id, _day, _time)
@@ -131,15 +148,20 @@ proctype light(byte state)
 	
 
 	if
-	::red?state;
-		printf("light:state %c\n" ,state);
-		run light(state);
-	::green?state;
-		printf("light:state %c\n" ,state);
-		run light(state);
-	::off?state;
-		printf("light:state %c\n" ,state);
-		run light(state);
+		::red?_;
+			state= 'r';
+			printf("light:state %c\n" ,state);
+			//wait(5000000);//5s
+			run light(state)
+		::green?_;
+			state= 'g';
+			printf("light:state %c\n" ,state);
+			//wait(5000000);//5s
+			run light(state)
+		::off?_;
+			state= 'o';
+			printf("light:state %c\n" ,state);
+			run light(state)
 	fi
 
 	
@@ -148,14 +170,41 @@ proctype light(byte state)
 proctype door(byte state)
 {
 	if
-	::unblocked?state;
+	::unblocked?_;
+		state= 'u';
 		printf("door:state %c\n" ,state);
-		run door(state);
-	::blocked?state;
+		//wait(30000000);//30s
+		run door(state)
+	::blocked?_;
+		state= 'b';
 		printf("door:state %c\n" ,state);
-		run door(state);
+		run door(state)
 	fi
 
+}
+
+
+proctype laser(byte state; int passageCounter)
+{
+	
+	if
+		::activate?_;
+			state = 'a'; 
+			printf("laser:active %c\n", state);
+			run laser(state, passageCounter)
+		::deactivate?_;
+			state = 'd';
+			printf("laser:deactive %c\n", state);
+			passageCounter=0;
+			run laser(state, passageCounter)
+		::detection?_;
+			passageCounter++;
+			if
+				::passageCounter >1;
+					alertIntrusion!noValue
+			fi;
+			run laser(state, passageCounter)
+	fi
 }
 
 proctype intrusionAlarm()
@@ -191,3 +240,4 @@ proctype journal()
 		completeEntry(id, day, time);
 	fi
 }
+
