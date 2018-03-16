@@ -46,10 +46,10 @@ init
 	unblocked!'u';
 	blocked!'b';
 
-	/*run journal();
+	run journal();
 	registerArrival!123,1010,01012018;
 	registerArrival!456,1010,02022018;
-	registerDeparture!123,1010,01012018;*/
+	registerDeparture!123,1010,01012018;
 
 	run intrusionAlarm();
 	alertIntrusion!noValue;
@@ -111,7 +111,7 @@ inline displayLogbook()
 	atomic
 	{
 		int i=0;
-		printf("----------\nEntries: \n");
+		printf("--------- \n");
 
 		do
 		:: i<logbook.current ->
@@ -161,12 +161,14 @@ proctype intrusionAlarm()
 {
 	alertIntrusion?_;
 	printf("Alerte intrusion !\n");
+	run intrusionAlarm();
 }
 
 proctype fireAlarm()
 {
 	alertFire?_;
 	printf("Alerte incendie !\n");
+	run fireAlarm();
 }
 
 proctype fireSensor()
@@ -178,6 +180,7 @@ proctype fireSensor()
 		printf("People in the building:\n");
 		displayLogbook();	
 	};
+	run fireSensor();
 }
 
 proctype journal()
@@ -189,4 +192,5 @@ proctype journal()
 	::registerDeparture?id, day, time;
 		completeEntry(id, day, time);
 	fi
+	run journal();
 }
