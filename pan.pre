@@ -1,0 +1,337 @@
+# 1 "buildingDoor.pml"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "buildingDoor.pml"
+
+
+
+typedef Log
+{
+ int current;
+ int id[20];
+ int arrivalDay[20];
+ int arrivalTime[20];
+ int departureDay[20];
+ int departureTime[20];
+};
+
+Log logbook;
+
+bool isValid = false;
+bool isInside = false;
+
+
+chan red = [0] of { byte };
+chan green = [0] of { byte };
+chan off = [0] of { byte };
+
+chan unblocked = [0] of {byte};
+chan blocked = [0] of {byte};
+
+
+chan deactivate = [0] of {byte};
+chan detection = [0] of {byte};
+chan activate = [0] of {byte};
+
+chan alertIntrusion = [0] of {int};
+chan alertFire = [0] of {int};
+chan detFire = [0] of {int};
+
+chan registerArrival = [0] of {int, int, int};
+chan registerDeparture = [0] of {int, int, int};
+
+chan getInfoIn = [0] of {int, int, int};
+chan getInfoEx = [0] of {int, int, int};
+
+
+
+
+
+init
+{
+ logbook.current = 0;
+
+ run light('o');
+
+ red!0;
+ green!0;
+ green!0;
+ off!0;
+
+
+ run door('b');
+
+
+
+ run laser('d',0);
+
+ activate!0;
+ deactivate!0;
+
+ detection!0;
+
+
+ detection!0;
+
+
+ run journal();
+ registerArrival!123,1010,01012018;
+ registerArrival!456,1010,02022018;
+ registerDeparture!123,1111,01012018;
+
+ run externalCardReader();
+ run internalCardReader();
+ getInfoEx!789, 2222, 16032018;
+ getInfoIn!456, 1234, 16032018;
+ getInfoEx!8520, 2020, 16032018;
+
+ run intrusionAlarm();
+
+
+
+
+
+ run fireAlarm();
+ run fireSensor();
+
+
+inline wait(x)
+{
+ int a = 0;
+ do
+  ::a!=x->a++;
+  ::a==x->break
+ od
+}
+
+inline addEntry(_id, _day, _time)
+{
+ atomic
+ {
+  logbook.id[logbook.current] = _id;
+  logbook.arrivalDay[logbook.current] = _day;
+  logbook.arrivalTime[logbook.current] = _time;
+  logbook.current++;
+ }
+}
+
+inline completeEntry(_id, _day, _time)
+{
+ int i=0;
+
+ do
+ :: logbook.id[i] != _id || (logbook.id[i] == _id && logbook.departureDay[i] != 0) ->
+  i++;
+ :: else ->
+  break;
+ od
+
+ if
+ :: (i > logbook.current) ->
+  printf("This person did not enter the building");
+ :: else ->
+  logbook.departureDay[i] = _day;
+  logbook.departureTime[i] = _time;
+ fi
+
+}
+
+inline checkIsInside(_id)
+{
+ int i=0;
+ do
+ :: i < logbook.current && logbook.id[i] != _id || (logbook.id[i] == _id && logbook.departureDay[i] != 0) ->
+  i++;
+ :: else ->
+  break;
+ od
+
+ if
+ :: i < logbook.current ->
+  isInside = true;
+ :: else ->
+  isInside = false;
+ fi
+}
+
+inline checkIsValid(_id)
+{
+ if
+ :: _id < 1000 ->
+  isValid = true;
+ :: else ->
+  isValid = false;
+ fi
+}
+
+inline displayLogbook()
+{
+ atomic
+ {
+  int i=0;
+  printf("--------- \n");
+
+  do
+  :: i<logbook.current ->
+   printf("%d: %d %d, %d %d\n", logbook.id[i], logbook.arrivalDay[i], logbook.arrivalTime[i], logbook.departureDay[i], logbook.departureTime[i]);
+   i++;
+  :: else ->
+   break;
+  od
+
+  printf("----------\n");
+ };
+}
+
+proctype light(byte state)
+{
+
+
+ if
+  ::red?_;
+   state= 'r';
+   printf("light:state %c\n" ,state);
+
+   run light(state)
+  ::green?_;
+   state= 'g';
+   printf("light:state %c\n" ,state);
+
+   run light(state)
+  ::off?_;
+   state= 'o';
+   printf("light:state %c\n" ,state);
+   run light(state)
+ fi
+
+
+}
+
+proctype door(byte state)
+{
+ if
+  ::unblocked?_;
+   state= 'u';
+   printf("door:state %c\n" ,state);
+
+   run door(state)
+  ::blocked?_;
+   state= 'b';
+   printf("door:state %c\n" ,state);
+   run door(state)
+ fi
+
+}
+
+
+proctype laser(byte state; int passageCounter)
+{
+
+ if
+  ::activate?_;
+   state = 'a';
+   printf("laser:active %c\n", state);
+   run laser(state, passageCounter)
+  ::deactivate?_;
+   state = 'd';
+   printf("laser:deactive %c\n", state);
+   passageCounter=0;
+   run laser(state, passageCounter)
+  ::detection?_;
+
+
+   passageCounter++;
+   printf("laser:detection %d\n",passageCounter);
+   if
+    ::passageCounter >1 -> alertIntrusion!0;
+    ::else -> printf("Ok")
+   fi;
+
+
+   run laser(state, passageCounter)
+
+ fi
+}
+
+proctype intrusionAlarm()
+{
+ alertIntrusion?_;
+ printf("Intrusion alert!\n");
+ run intrusionAlarm();
+}
+
+proctype fireAlarm()
+{
+ alertFire?_;
+ printf("Fire alert!\n");
+ run fireAlarm();
+}
+
+proctype fireSensor()
+{
+ detFire?_;
+ alertFire!0;
+ unblocked!'u';
+ atomic {
+  printf("People in the building:\n");
+  displayLogbook();
+ };
+ run fireSensor();
+}
+
+proctype externalCardReader()
+{
+ int id, day, time;
+
+ getInfoEx?id, day, time;
+ atomic
+ {
+  checkIsValid(id);
+  if
+  :: isValid == true ->
+   green!0;
+   registerArrival!id, day, time;
+   unblocked!0;
+   isValid = false;
+  :: else ->
+   red!0;
+   blocked!0;
+  fi
+ };
+ run externalCardReader();
+}
+
+proctype internalCardReader()
+{
+ int id, day, time;
+
+ getInfoIn?id, day, time;
+ atomic
+ {
+  checkIsInside(id);
+  if
+  :: isInside == true ->
+   green!0;
+   registerDeparture!id, day, time;
+   unblocked!0;
+   isInside = false;
+  :: else ->
+   red!0;
+   blocked!0;
+  fi
+ };
+
+ run internalCardReader();
+}
+
+proctype journal()
+{
+ int id, day, time;
+ if
+ ::registerArrival?id, day, time;
+  addEntry(id, day, time);
+ ::registerDeparture?id, day, time;
+  completeEntry(id, day, time);
+ fi
+ run journal();
+}
