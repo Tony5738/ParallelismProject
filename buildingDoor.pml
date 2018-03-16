@@ -89,7 +89,7 @@ init
 	//run fireSensor();
 	run fireAlarm();
 	run fireSensor();
-
+}
 
 inline wait(x)
 {
