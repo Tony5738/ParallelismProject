@@ -207,12 +207,15 @@ proctype laser(byte state; int passageCounter)
 			run laser(state, passageCounter)
 		::detection?_;
 			
+			
 			passageCounter++;
 			printf("laser:detection %d\n",passageCounter);
 			if
-				::passageCounter <1 -> printf("alert")
-				::else -> printf("ok")
-			fi
+				::passageCounter >1 -> alertIntrusion!noValue;
+				::else -> printf("Ok")
+			fi;
+			
+			
 			run laser(state, passageCounter)
 		
 	fi
