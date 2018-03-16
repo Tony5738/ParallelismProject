@@ -36,7 +36,6 @@ chan registerDeparture = [0] of {int, int, int};
 init
 {
 	logbook.current = 0;
-
 	
 	run light('o');
 	red!'r';
