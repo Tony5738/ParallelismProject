@@ -5,16 +5,18 @@ chan green = [0] of { byte };
 chan off = [0] of { byte };
 
 chan unblocked = [0] of {byte};
-chan blocked = [0] of {byte}
+chan blocked = [0] of {byte};
+
+chan start = [0] of {byte}
 
 init {
 
 	
-	
-	run light('o');
+	byte value = 'o';
+	run light(value);
 	red!'r';
 	green!'g';
-	off!'o'
+	off!value
 
 	run door('b');
 	unblocked!'u';
@@ -53,4 +55,11 @@ proctype door(byte state)
 		run door(state)
 	fi
 
+}
+
+inline wait(x)
+{
+	int a = 0;
+	do
+		::a!=x->a=a+1
 }
