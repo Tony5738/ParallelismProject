@@ -45,6 +45,7 @@ init
 	run light('o');
 	red!noValue;
 	green!noValue;
+	green!noValue;
 	off!noValue;
 
 	run door('b');
@@ -54,6 +55,13 @@ init
 	run laser('d',0);
 	activate!noValue;
 	deactivate!noValue;
+	
+	detection!noValue;
+
+	//printf("trace");
+	detection!noValue;
+	
+	
 
 	/*run journal();
 	registerArrival!123,1010,01012018;
@@ -61,11 +69,11 @@ init
 	registerDeparture!123,1010,01012018;*/
 
 	run intrusionAlarm();
-	alertIntrusion!noValue;
+	//alertIntrusion!noValue;
 
-	run fireAlarm();
-	run fireSensor();
-	detFire!noValue;
+	//run fireAlarm();
+	//run fireSensor();
+	//detFire!noValue;
 }
 
 inline wait(x)
@@ -170,15 +178,15 @@ proctype light(byte state)
 proctype door(byte state)
 {
 	if
-	::unblocked?_;
-		state= 'u';
-		printf("door:state %c\n" ,state);
-		//wait(30000000);//30s
-		run door(state)
-	::blocked?_;
-		state= 'b';
-		printf("door:state %c\n" ,state);
-		run door(state)
+		::unblocked?_;
+			state= 'u';
+			printf("door:state %c\n" ,state);
+			//wait(30000000);//30s
+			run door(state)
+		::blocked?_;
+			state= 'b';
+			printf("door:state %c\n" ,state);
+			run door(state)
 	fi
 
 }
@@ -186,7 +194,7 @@ proctype door(byte state)
 
 proctype laser(byte state; int passageCounter)
 {
-	
+
 	if
 		::activate?_;
 			state = 'a'; 
@@ -198,12 +206,15 @@ proctype laser(byte state; int passageCounter)
 			passageCounter=0;
 			run laser(state, passageCounter)
 		::detection?_;
+			
 			passageCounter++;
+			printf("laser:detection %d\n",passageCounter);
 			if
-				::passageCounter >1;
-					alertIntrusion!noValue
-			fi;
+				::passageCounter <1 -> printf("alert")
+				::else -> printf("ok")
+			fi
 			run laser(state, passageCounter)
+		
 	fi
 }
 
