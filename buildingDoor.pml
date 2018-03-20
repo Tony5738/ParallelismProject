@@ -43,6 +43,15 @@ chan getInfoEx = [0] of {int, int, int};
 
 //////////////////////////////////////////
 
+inline wait(x)
+{
+	int a = 0;
+	do
+		::a!=x->a++;
+		::a==x->break
+	od
+}
+
 init
 {
 	logbook.current = 0;
@@ -54,20 +63,44 @@ init
 	green!noValue;
 	off!noValue;
 
+	red!noValue;
+	green!noValue;
+	green!noValue;
+	off!noValue;
+
 
 	run door('b');
 	//unblocked!noValue;
 	//blocked!noValue
+	run intrusionAlarm();
+	//alertIntrusion!noValue;
 
-	run laser('d',0);
+	run laser(0);
 
 	activate!noValue;
+	//wait(20000);
+	detection!noValue;
+	//wait(20000);
+	detection!noValue;
+	//wait(20000);
+	detection!noValue;
+	//wait(20000);
 	deactivate!noValue;
-	
+	deactivate!noValue;
+	//wait(20000);
 	detection!noValue;
+	//wait(20000);
 
-	//printf("trace");
+	
+	activate!noValue;
+	//wait(20000);
 	detection!noValue;
+	//wait(20000);
+	detection!noValue;
+	//wait(20000);
+	deactivate!noValue;
+	//wait(20000);
+
 
 
 	run journal();
@@ -81,8 +114,7 @@ init
 	getInfoIn!456, 1234, 16032018;
 	getInfoEx!8520, 2020, 16032018;
 
-	run intrusionAlarm();
-	//alertIntrusion!noValue;
+
 
 
 	//run fireAlarm();
@@ -91,14 +123,7 @@ init
 	run fireSensor();
 }
 
-inline wait(x)
-{
-	int a = 0;
-	do
-		::a!=x->a++;
-		::a==x->break
-	od
-}
+
 
 inline addEntry(_id, _day, _time)
 {
@@ -220,14 +245,53 @@ proctype door(byte state)
 }
 
 
-proctype laser(byte state; int passageCounter)
+proctype laser(int passageCounter)
 {
-
+		
+	
 	if
 		::activate?_;
-			state = 'a'; 
-			printf("laser:active %c\n", state);
-			run laser(state, passageCounter)
+			printf("laser:active\n");	
+			
+
+			do
+				::deactivate?_;
+					
+					
+					printf("laser:deactive\n");
+					passageCounter=0;
+					//run laser(passageCounter);
+					break	
+					
+					
+				::detection?_;
+						
+					atomic{
+						passageCounter++;
+						printf("laser:detection %d\n",passageCounter);
+						if
+							::passageCounter > 1 -> alertIntrusion!noValue //TODO see for another better solution
+							::else -> printf("Ok\n")
+						fi;
+					}
+					
+						
+			od;
+
+
+		::detection?_;
+			printf("Not activate\n");
+		::deactivate?_;
+			printf("Not activate\n");
+			
+
+	fi
+
+	run laser(passageCounter)
+	
+	
+	
+	/*if	
 		::deactivate?_;
 			state = 'd';
 			printf("laser:deactive %c\n", state);
@@ -235,25 +299,30 @@ proctype laser(byte state; int passageCounter)
 			run laser(state, passageCounter)
 		::detection?_;
 			
-			
-			passageCounter++;
-			printf("laser:detection %d\n",passageCounter);
 			if
-				::passageCounter >1 -> alertIntrusion!noValue;
-				::else -> printf("Ok")
-			fi;
-			
+				::state=='a'
+					passageCounter++;
+					atomic{
+						printf("laser:detection %d\n",passageCounter);
+						if
+							::passageCounter >1 -> alertIntrusion!noValue
+							::else -> printf("Ok\n")
+						fi;
+					}
+					
+				::else->printf("No detection, laser is not activate\n");
+			fi
 			
 			run laser(state, passageCounter)
 		
-	fi
+	fi*/
 }
 
 proctype intrusionAlarm()
 {
 	alertIntrusion?_;
 	printf("Intrusion alert!\n");
-	run intrusionAlarm();
+	run intrusionAlarm()
 }
 
 proctype fireAlarm()
