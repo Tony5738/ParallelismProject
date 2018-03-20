@@ -217,6 +217,11 @@ proctype laser(byte state; int passageCounter)
 			run laser(state, passageCounter)
 		
 	fi
+
+	/*
+	plus séquentiel
+	do od pour les détections
+	*/
 }
 
 proctype intrusionAlarm()
