@@ -20,6 +20,11 @@ bool isInside = false;
 chan red = [0] of { byte };
 chan green = [0] of { byte };
 chan off = [0] of { byte };
+
+//lightCommand
+chan putColor = [0] of { chan };
+
+
 //door
 chan unblocked = [0] of {byte};
 chan blocked = [0] of {byte};
@@ -43,14 +48,6 @@ chan getInfoEx = [0] of {int, int, int};
 
 //////////////////////////////////////////
 
-inline wait(x)
-{
-	int a = 0;
-	do
-		::a!=x->a++;
-		::a==x->break
-	od
-}
 
 init
 {
@@ -71,6 +68,14 @@ init
 	run command();
 }
 
+inline wait(x)
+{
+	int a = 0;
+	do
+		::a!=x->a++;
+		::a==x->break
+	od
+}
 
 
 inline addEntry(_id, _day, _time)
@@ -160,12 +165,12 @@ proctype light(byte state)
 		::red?_;
 			state= 'r';
 			printf("light:state %c\n" ,state);
-			//wait(5000000);//5s
+			wait(50000);//5s
 			run light(state)
 		::green?_;
 			state= 'g';
 			printf("light:state %c\n" ,state);
-			//wait(5000000);//5s
+			wait(50000);//5s
 			run light(state)
 		::off?_;
 			state= 'o';
@@ -176,6 +181,14 @@ proctype light(byte state)
 	
 }
 
+proctype lightCommand()
+{
+	putColor?chan;
+	chan!noValue;
+	wait(50000);
+	off!noValue;
+}
+
 proctype door(byte state)
 {
 	if
@@ -183,7 +196,7 @@ proctype door(byte state)
 			state= 'u';
 			printf("door:state %c\n" ,state);
 			activate!noValue;
-			//wait(3000);//30s
+			
 			run door(state)
 		::blocked?_;
 			state= 'b';
@@ -197,10 +210,11 @@ proctype door(byte state)
 
 proctype laser(int passageCounter)
 {
-		
 	
-	if
-		::activate?_;
+	printf("laser:run\n");
+	
+	//if
+		activate?_;
 			printf("laser:active\n");	
 			
 
@@ -210,7 +224,7 @@ proctype laser(int passageCounter)
 					
 					printf("laser:deactive\n");
 					passageCounter=0;
-					//run laser(passageCounter);
+					
 					break	
 					
 					
@@ -223,26 +237,19 @@ proctype laser(int passageCounter)
 							::passageCounter > 1 -> alertIntrusion!noValue //TODO see for another better solution
 							::else -> printf("Ok\n")
 						fi;
-					}
-					
-						
+					}	
 			od;
 
 
-		::detection?_;
+		/*::detection?_;
 			printf("Not activate\n");
 		::deactivate?_;
 			printf("Not activate\n");
 			
 
-	fi
+	fi*/
 
 	run laser(passageCounter)
-	
-	
-	
-
-
 }
 
 proctype intrusionAlarm()
@@ -282,10 +289,10 @@ proctype externalCardReader()
 		checkIsValid(id);
 		if
 		:: isValid == true ->
-			green!noValue;
+			green!noValue;//TODO change here
 			registerArrival!id, day, time;
 			unblocked!noValue;
-			wait(3000); // 30s
+			wait(300000); // 30s
 			blocked!noValue;
 			isValid = false;
 		:: else ->
@@ -301,16 +308,19 @@ proctype internalCardReader()
 {
 	int id, day, time;
 
-	getInfoIn?id, day, time;
 	atomic
 	{
+		getInfoIn?id, day, time;
+	
 		checkIsInside(id);
 		if
 		:: isInside == true ->
-			green!noValue;
+			green!noValue;//TODO change here
 			registerDeparture!id, day, time;
 			unblocked!noValue;
-			wait(3000); // 30s
+			
+			wait(300000); // 30s
+
 			blocked!noValue;
 			isInside = false;
 		:: else ->
@@ -340,7 +350,7 @@ proctype command()
 	printf("-------------------\n");
 	printf("START OF THE SYSTEM\n");
 
-	printf("\n- Id#123 enters the bulding at 16:00 16/03/2018\n");
+	printf("\n- Id#123 enters the building at 16:00 16/03/2018\n");
 	getInfoEx!123,16032018,1600; // they put their cards
 	detection!noValue; // they go through the door
 	wait(500);
@@ -349,7 +359,7 @@ proctype command()
 	displayLogbook();
 	wait(500);
 
-	printf("\n- Id#456 enters the bulding at 16:15 16/03/2018\n");
+	printf("\n- Id#456 enters the building at 16:15 16/03/2018\n");
 	getInfoEx!456,16032018,1615; // they put their cards
 	detection!noValue; // they go through the door
 	wait(500);
@@ -358,7 +368,7 @@ proctype command()
 	displayLogbook();
 	wait(500);
 
-	printf("\n- Id#123 leaves the bulding at 16:45 16/03/2018\n");
+	printf("\n- Id#123 leaves the building at 16:45 16/03/2018\n");
 	getInfoIn!123,16032018,1645; // they put their cards
 	detection!noValue; // they go through the door
 	wait(500);
@@ -367,16 +377,17 @@ proctype command()
 	displayLogbook();
 	wait(500);
 
-	printf("\n- Id#123 leaves the bulding again at 16:46 16/03/2018 (and shouldn't be able to, already outside)\n");
+	printf("\n- Id#123 leaves the building again at 16:46 16/03/2018 (and shouldn't be able to, already outside)\n");
 	getInfoIn!123,16032018,1646; // they put their cards
-	detection!noValue; // they go through the door
+	//detection!noValue; // they go through the door
 	wait(500);
 
 	printf("\n- The logbook currently:\n");
 	displayLogbook();
 	wait(500);
 
-	printf("\n- Id#789 enters the bulding at 17:00 16/03/2018 (but 3 other people try to enter)\n");
+	//TODO was here and doesn't work
+	printf("\n- Id#789 enters the building at 17:00 16/03/2018 (but 3 other people try to enter)\n");
 	getInfoEx!789,16032018,1700; // they put their cards
 	detection!noValue; // they go through the door
 	detection!noValue; // another goes through
@@ -388,11 +399,11 @@ proctype command()
 	displayLogbook();
 	wait(500);
 
-	printf("\n- Id#1230 wants to enter the bulding at 17:15 16/03/2018 (and shouldn't be able to, incorrect id)\n");
+	printf("\n- Id#1230 wants to enter the building at 17:15 16/03/2018 (and shouldn't be able to, incorrect id)\n");
 	getInfoEx!1230,16032018,1715; // they put their cards
 	wait(500);
 
-	printf("\n- Id#123 enters the bulding at 17:30 16/03/2018\n");
+	printf("\n- Id#123 enters the building at 17:30 16/03/2018\n");
 	getInfoEx!123,16032018,1730; // they put their cards
 	detection!noValue; // they go through the door
 	wait(500);
