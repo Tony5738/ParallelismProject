@@ -28,19 +28,22 @@ chan putColor = [0] of { chan };
 //door
 chan unblocked = [0] of {byte};
 chan blocked = [0] of {byte};
-//laser
 
+//laser
 chan deactivate = [0] of {byte};
 chan detection = [0] of {byte};
 chan activate = [0] of {byte};
 
+//intrusion alert and fire alert
 chan alertIntrusion = [0] of {int};
 chan alertFire = [0] of {int};
 chan detFire = [0] of {int};
 
+//Journal
 chan registerArrival = [0] of {int, int, int};
 chan registerDeparture = [0] of {int, int, int};
 
+//CardReader
 chan getInfoIn = [0] of {int, int, int};
 chan getInfoEx = [0] of {int, int, int};
 
@@ -53,6 +56,7 @@ init
 {
 	logbook.current = 0;
 	
+	run lightCommand();
 	run light('o');
 
 	run door('b');
@@ -165,12 +169,12 @@ proctype light(byte state)
 		::red?_;
 			state= 'r';
 			printf("light:state %c\n" ,state);
-			wait(50000);//5s
+			
 			run light(state)
 		::green?_;
 			state= 'g';
 			printf("light:state %c\n" ,state);
-			wait(50000);//5s
+			
 			run light(state)
 		::off?_;
 			state= 'o';
@@ -183,10 +187,13 @@ proctype light(byte state)
 
 proctype lightCommand()
 {
-	putColor?chan;
-	chan!noValue;
-	wait(50000);
+	chan myChan;
+
+	putColor?myChan;
+	myChan!noValue;
+	wait(50000);//5s
 	off!noValue;
+	run lightCommand()
 }
 
 proctype door(byte state)
@@ -289,16 +296,16 @@ proctype externalCardReader()
 		checkIsValid(id);
 		if
 		:: isValid == true ->
-			green!noValue;//TODO change here
+			putColor!green;//TODO change here
 			registerArrival!id, day, time;
 			unblocked!noValue;
-			wait(300000); // 30s
+			wait(3000000); // 30s
 			blocked!noValue;
 			isValid = false;
 		:: else ->
 			printf("Cannot enter building\n");
-			red!noValue;
-			blocked!noValue;
+			putColor!red;
+			//blocked!noValue;
 		fi
 	};
 	run externalCardReader();
@@ -315,18 +322,18 @@ proctype internalCardReader()
 		checkIsInside(id);
 		if
 		:: isInside == true ->
-			green!noValue;//TODO change here
+			putColor!green;//TODO change here
 			registerDeparture!id, day, time;
 			unblocked!noValue;
 			
-			wait(300000); // 30s
+			wait(3000000); // 30s
 
 			blocked!noValue;
 			isInside = false;
 		:: else ->
 			printf("Cannot leave building\n");
-			red!noValue;
-			blocked!noValue;
+			putColor!red;
+			//blocked!noValue;
 		fi
 	};
 
