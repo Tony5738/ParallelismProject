@@ -18,18 +18,21 @@ bool isInside = false;
 
 int nbPassages = 0;
 
+bool doorOpened = false;
+
 //light
 chan red = [0] of { byte };
 chan green = [0] of { byte };
 chan off = [0] of { byte };
 
 //lightCommand
-chan putColor = [0] of { chan };
+chan putColor = [1] of { chan };
 
 
 //door
 chan unblocked = [0] of {byte};
 chan blocked = [0] of {byte};
+
 //laser
 
 //chan deactivate = [0] of {byte};
@@ -56,6 +59,7 @@ init
 {
 	logbook.current = 0;
 	
+	run lightCommand();
 	run light('o');
 
 	run door('b');
@@ -168,12 +172,11 @@ proctype light(byte state)
 		::red?_;
 			state= 'r';
 			printf("light:state %c\n" ,state);
-			wait(50000);//5s
+			
 			run light(state)
 		::green?_;
 			state= 'g';
 			printf("light:state %c\n" ,state);
-			wait(50000);//5s
 			run light(state)
 		::off?_;
 			state= 'o';
@@ -183,26 +186,31 @@ proctype light(byte state)
 
 	
 }
-/*
+
 proctype lightCommand()
 {
-	putColor?chan;
-	chan!noValue;
+	chan myChan;
+
+	putColor?myChan;
+	myChan!noValue;
 	wait(50000);
 	off!noValue;
+	run lightCommand();
 }
-*/
+
 proctype door(byte state)
 {
 	if
 		::unblocked?_;
 			state= 'u';
 			printf("door:state %c\n" ,state);
+			doorOpened = true;
 			//activate!noValue;			
 			run door(state)
 		::blocked?_;
 			state= 'b';
 			printf("door:state %c\n" ,state);
+			doorOpened = false;
 			//deactivate!noValue;
 			resetLaser!noValue;
 			run door(state)
@@ -227,8 +235,8 @@ proctype door(byte state)
 
 proctype laser()
 {
-	if 
-		::detection?_;
+	do 
+		::doorOpened -> detection?_;
 			nbPassages ++;
 			printf("Passage detected\n");
 			if
@@ -236,11 +244,12 @@ proctype laser()
 				::else; // do nothing
 			fi;
 		::resetLaser?_;
+		printf("reset\n");
 			nbPassages = 0;
-	fi
+	od;
 
 
-	run laser();
+	
 }
 /*
 proctype laser(int passageCounter)
@@ -324,7 +333,7 @@ proctype externalCardReader()
 		checkIsValid(id);
 		if
 		:: isValid == true ->
-			green!noValue;//TODO change here
+			putColor!green;
 			registerArrival!id, day, time;
 			unblocked!noValue;
 			wait(300000); // 30s
@@ -332,7 +341,7 @@ proctype externalCardReader()
 			isValid = false;
 		:: else ->
 			printf("Cannot enter building\n");
-			red!noValue;
+			putColor!red;
 			blocked!noValue;
 		fi
 	};
@@ -350,7 +359,7 @@ proctype internalCardReader()
 		checkIsInside(id);
 		if
 		:: isInside == true ->
-			green!noValue;//TODO change here
+			putColor!green;
 			registerDeparture!id, day, time;
 			unblocked!noValue;
 			
@@ -360,7 +369,7 @@ proctype internalCardReader()
 			isInside = false;
 		:: else ->
 			printf("Cannot leave building\n");
-			red!noValue;
+			putColor!red;
 			blocked!noValue;
 		fi
 	};
