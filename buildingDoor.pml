@@ -332,6 +332,7 @@ proctype fireAlarm()
 {
 	alertFire?_;
 	printf("Fire alert!\n");
+	printf("building burned!\n");
 	run fireAlarm();
 }
 
@@ -436,11 +437,13 @@ proctype simulation()
 				::c=='i'-> in!noValue;//somebody going out
 				::c=='o'-> out!noValue;//somebody going in
 				::c=='d'-> detection!noValue;
-				::c=='f'-> detFire!noValue;
+				::c=='f'-> detFire!noValue;break;
 				//::c==10 -> break;//enter
-				::else->;
+				::else;
 			fi
 	od;
+
+	printf("SIMULATION ENDED");
 	//run simulation();
 	/*int j;
 	for(j : 0 .. i-1){

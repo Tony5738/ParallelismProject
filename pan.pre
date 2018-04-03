@@ -383,11 +383,13 @@ proctype simulation()
     ::c=='i'-> in!0;
     ::c=='o'-> out!0;
     ::c=='d'-> detection!0;
-    ::c=='f'-> detFire!0;
+    ::c=='f'-> detFire!0;break;
 
-    ::else->;
+    ::else;
    fi
  od;
+
+ printf("out loops");
 
 
 
@@ -455,5 +457,5 @@ proctype command()
  }
 
  run command();
-# 596 "buildingDoor.pml"
+# 598 "buildingDoor.pml"
 }
