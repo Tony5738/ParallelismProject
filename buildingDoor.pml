@@ -20,6 +20,9 @@ int nbPassages = 0;
 
 bool doorOpened = false;
 
+int ident;
+
+
 //light
 chan red = [0] of { byte };
 chan green = [0] of { byte };
@@ -55,15 +58,36 @@ chan registerDeparture = [0] of {int, int, int};
 chan getInfoIn = [0] of {int, int, int};
 chan getInfoEx = [0] of {int, int, int};
 
+//simulation
+chan STDIN;
+chan in = [0] of {int};
+chan out = [0] of {int};
+
+
+chan registration = [0] of {int};
+
+chan cancelRegistration = [0] of {int}
+
 
 
 //////////////////////////////////////////
 
 
+inline wait(x)
+{
+	int a = 0;
+	do
+		::a!=x->a++;
+		::a==x->break
+	od
+}
+
 init
 {
 	logbook.current = 0;
 	
+
+	run simulation();
 	run lightCommand();
 	run light('o');
 
@@ -78,15 +102,7 @@ init
 	run fireAlarm();
 	run fireSensor();
 	run command();
-}
-
-inline wait(x)
-{
-	int a = 0;
-	do
-		::a!=x->a++;
-		::a==x->break
-	od
+	
 }
 
 
@@ -211,14 +227,16 @@ proctype door(byte state)
 			state= 'u';
 			printf("door:state %c\n" ,state);
 			doorOpened = true;
-			//activate!noValue;			
+			wait(300000); // 30s
+			if
+				::nbPassages == 0->cancelRegistration!noValue;
+				::else->;
+			fi
 			run door(state)
 		::blocked?_;
 			state= 'b';
 			printf("door:state %c\n" ,state);
 			doorOpened = false;
-			//deactivate!noValue;
-			resetLaser!noValue;
 			run door(state)
 	fi
 
@@ -242,15 +260,16 @@ proctype door(byte state)
 proctype laser()
 {
 	do 
-		::doorOpened -> detection?_;
+		::detection?_;
 			nbPassages ++;
 			printf("Passage detected\n");
 			if
-				::nbPassages > 1 -> alertIntrusion!noValue
-				::else; // do nothing
+				::nbPassages > 1 -> alertIntrusion!noValue;
+				::nbPassages == 1 -> registration!noValue;
+				
 			fi;
 		::resetLaser?_;
-		printf("reset\n");
+			printf("reset\n");
 			nbPassages = 0;
 	od;
 
@@ -341,15 +360,19 @@ proctype externalCardReader()
 		:: isValid == true ->
 
 			putColor!green;
-			registerArrival!id, day, time;
-			unblocked!noValue;
-			wait(3000000); // 30s
-			blocked!noValue;
-			isValid = false;
-		:: else ->
+			if 
+				::registration?_;
+					registerArrival!id, day, time;//TODO if not going in
+				::cancelRegistration?_;
+
+				
+			fi
+			
+			
+			:: else ->
 			printf("Cannot enter building\n");
 			putColor!red;
-			blocked!noValue;
+			/*blocked!noValue;*/
 
 		fi
 	};
@@ -359,6 +382,7 @@ proctype externalCardReader()
 proctype internalCardReader()
 {
 	int id, day, time;
+	
 
 	atomic
 	{
@@ -366,19 +390,20 @@ proctype internalCardReader()
 	
 		checkIsInside(id);
 		if
-		:: isInside == true ->
-			putColor!green;
-			registerDeparture!id, day, time;
-			unblocked!noValue;
+			:: isInside == true ->
 			
-			wait(3000000); // 30s
-
-			blocked!noValue;
-			isInside = false;
-		:: else ->
-			printf("Cannot leave building\n");
-			putColor!red;
-			blocked!noValue;
+				putColor!green;
+				if 
+					::registration?_;
+						registerDeparture!id, day, time;//TODO if not going out
+					::cancelRegistration?_;
+					
+				fi
+			
+			:: else ->
+				printf("Cannot leave building\n");
+				putColor!red;
+				//blocked!noValue;
 		fi
 	};
 
@@ -397,21 +422,96 @@ proctype journal()
 	run journal();
 }
 
+proctype simulation()
+{
+	
+	int c;
+	//byte word[50];
+	//int i = 0;
+	do
+
+		::STDIN?c->
+			printf("%c\n",c );
+			if
+				::c=='i'-> in!noValue;//somebody going out
+				::c=='o'-> out!noValue;//somebody going in
+				::c=='d'-> detection!noValue;
+				::c=='f'-> detFire!noValue;
+				//::c==10 -> break;//enter
+				::else->;
+			fi
+	od;
+	//run simulation();
+	/*int j;
+	for(j : 0 .. i-1){
+		printf("%c\n",word[j]);
+	}*/
+
+}
+
 proctype command()
 {
-	printf("-------------------\n");
+	/*printf("-------------------\n");
 	printf("START OF THE SYSTEM\n");
 
-	printf("\n- Id#123 enters the building at 16:00 16/03/2018\n");
-	getInfoEx!123,16032018,1600; // they put their cards
-	detection!1; // they go through the door
-	wait(50000);
+	printf("\n- Id#%d enters the building at %d %d\n", id, time, day);*/
+	
+	atomic {
+
+		int i;
+		if
+		
+			/*::
+				fire->detFire!noValue; // TODO inderterminism choice*/
+			::
+				out?_->getInfoEx!ident,30032018,1120;
+				if
+					::
+						isValid;
+						unblocked!noValue;
+						doorOpened;
+						/*for(i : 1 .. nbDetect){
+							detection!noValue; // they go through the door
+						}*/
+						blocked!noValue;
+
+						resetLaser!noValue;
+						
+					::else->;
+				fi
+			::
+				in?_->getInfoIn!ident,30032018,1120;
+				if
+					::
+						isInside;
+						unblocked!noValue;
+						doorOpened;
+						/*for(i : 1 .. nbDetect){
+							detection!noValue; // they go through the door
+						}*/
+						blocked!noValue;
+						resetLaser!noValue;
+					::else->;
+				fi
+		fi
+		
+		
+	}
+	
+	
+	
 
 	atomic
 	{
 		printf("\n- The logbook currently:\n");
 		displayLogbook();
 	}
+
+	run command();
+
+
+
+	/*
 	wait(50000);
 
 	printf("\n- Id#456 enters the building at 16:15 16/03/2018\n");
@@ -490,7 +590,7 @@ proctype command()
 	wait(50000);
 
 	printf("\n- A fire is starting\n");
-	detFire!noValue;
+	detFire!noValue;*/
 
 
 }
