@@ -446,6 +446,6 @@ proctype command()
 	}
 
 	run command();
-
+}
 
 
