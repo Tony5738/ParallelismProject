@@ -376,6 +376,7 @@ proctype journal()
 
 proctype simulation()
 {
+
 	printf("\nSimulation start\n");
 	printf("-i someone is using the internal card reader\n");
 	printf("-o someone is using the external card reader\n");
@@ -414,6 +415,7 @@ proctype simulation()
 				::c1=='p'-> isFire = false;
 							resetLaser!noValue;
 							printf("firemen fighted the fire or some heavy rain has falled or a big wet piece of fabric has falled from the sky and exstinguished the fire.\n");
+
 				::else;
 			fi
 	od;
@@ -440,12 +442,14 @@ proctype command()
 						doorOpened;
 						blocked!noValue;
 						!doorOpened;
+
 						resetLaser!noValue;
 						
 					::else->;
 				fi
 			::
 				in?_->getInfoIn!ident,30032018,1130;
+
 				if
 					::
 						isInside;
@@ -473,4 +477,6 @@ proctype command()
 	run command();
 
 
+
 }
+
