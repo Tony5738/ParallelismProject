@@ -396,7 +396,7 @@ proctype simulation()
 					if
 						::c2==49 -> ident = 123; // 1
 						::c2==50 -> ident = 456; // 2
-						::c2==51 -> ident = 7890; // 3, id not allowed in the building
+						::else -> ident = 7890; // 3, id not allowed in the building
 					fi
 					in!noValue;//somebody going out
 
@@ -406,7 +406,7 @@ proctype simulation()
 					if
 						::c2==49 -> ident = 123; // 1
 						::c2==50 -> ident = 456; // 2
-						::c2==51 -> ident = 7890; // 3, id not allowed in the building
+						::else -> ident = 7890; // 3, id not allowed in the building
 					fi
 					out!noValue;//somebody going in
 
